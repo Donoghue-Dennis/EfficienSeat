@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:weightSum="100"
+    android:background="@color/umassMaroon">
+
+    <ImageButton
+        android:id="@+id/Berk"
+        android:tag="Berk"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="25"
+        android:src="@mipmap/blackberk"
+        android:scaleType="fitCenter"
+        android:onClick="goToDining"
+        android:contentDescription="@string/berk_content_description"
+        />
+
+    <ImageButton
+        android:id="@+id/Frank"
+        android:tag="Frank"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="25"
+        android:src="@mipmap/blackfrank"
+        android:scaleType="fitCenter"
+        android:onClick="goToDining"
+        android:contentDescription="@string/frank_content_description"
+
+        />
+
+    <ImageButton
+        android:id="@+id/Hamp"
+        android:tag="Hamp"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="25"
+        android:src="@mipmap/blackhamp"
+        android:scaleType="fitCenter"
+        android:onClick="goToDining"
+        android:contentDescription="@string/hamp_content_description"
+        />
+
+    <ImageButton
+        android:id="@+id/Worcester"
+        android:tag="Worcester"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="25"
+        android:src="@mipmap/blackworcester"
+        android:scaleType="fitCenter"
+        android:onClick="goToDining"
+        android:contentDescription="@string/worcester_content_description"
+
+        />
+</LinearLayout>

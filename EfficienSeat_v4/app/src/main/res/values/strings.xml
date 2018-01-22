@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">EfficienSeat</string>
+    <string name="berk_content_description">Click to select the Berkshire Dining Hall</string>
+    <string name="frank_content_description">Click to select the Franklin Dining Hall</string>
+    <string name="hamp_content_description">Click to select the Hampshire Dining Hall</string>
+    <string name="worcester_content_description">Click to select the Worcester Dining Hall</string>
+    <string name="search_hint">Search by Party Size</string>
+    <string name="title_activity_table_map">table_map</string>
+</resources>
