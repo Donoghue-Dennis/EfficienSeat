@@ -4,56 +4,74 @@ package ddonoghue.efficienseat_v4;
  * Created by DDonoghue on 12/3/2017.
  */
 
+import android.content.Context;
 import android.util.Log;
 
+import com.amazonaws.auth.CognitoCachingCredentialsProvider;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBAttribute;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBHashKey;
+import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBTable;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+
+import java.util.Map;
 
 @DynamoDBTable(tableName = "Tables")
-public class Table {
+public class localTable {
 
-    private int tableID, tableStatus,tableX,tableY,tableCap,tableAvail,tableType,seat1,seat2,seat3,seat4;
+    private int tableID,tableStatus,tableX,tableY,tableCap,tableAvail,tableType,tableAngle,seat1,seat2,seat3,seat4;
 
-    public Table(int x, int y, int id, int status, int type, int cap, int avail, int seat1, int seat2, int seat3, int seat4){
+    private Context tableContext;
+
+    public localTable(Context context, int x, int y, int id, int status, int type, int angle, int seat1, int seat2, int seat3, int seat4){
         this.tableStatus = status;
         this.tableX = x;
         this.tableY = y;
         this.tableID = id;
-        this.tableCap = cap;
-        this.tableAvail = avail;
+        this.tableAvail = 4-seat1-seat2-seat3-seat4;
         this.tableType = type;
+        this.tableAngle = angle;
         this.seat1 = seat1;
         this.seat2 = seat2;
         this.seat3 = seat3;
         this.seat4 = seat4;
+        this.tableContext = context;
     }
 
-    public Table(){}
+    public localTable(){}
 
     public void printTable(){
         Log.d("db","Table ID: " + tableID);
         Log.d("db","Table Status: " + tableStatus);
         Log.d("db","Table X: " + tableX);
         Log.d("db","Table Y: " + tableY);
-        Log.d("db","Table Capacity: " + tableCap);
-        Log.d("db","Table Availability: " + tableAvail);
         Log.d("db","Table Type: " + tableType);
+        Log.d("db","Table Angle: " + tableAngle);
         Log.d("db","Seat One Status: " + seat1);
         Log.d("db","Seat Two Status: " + seat2);
         Log.d("db","Seat Three Status: " + seat3);
         Log.d("db","Seat Four Status: " + seat4);
     }
 
-    //GETS
-    @DynamoDBAttribute(attributeName = "tableAvail")
-    public int getTableAvail() {
-        return tableAvail;
+    public void updateTable(Map<String, AttributeValue> item){
+        this.setTableID(Integer.parseInt(item.get("tableID").getN()));
+        this.setTableX(Integer.parseInt(item.get("tableX").getN()));
+        this.setTableY(Integer.parseInt(item.get("tableY").getN()));
+        this.setTableStatus(Integer.parseInt(item.get("tableStatus").getN()));
+        this.setTableAngle(Integer.parseInt(item.get("tableAngle").getN()));
+        this.setTableType(Integer.parseInt(item.get("tableType").getN()));
+        this.setSeat1(Integer.parseInt(item.get("seat1").getN()));
+        this.setSeat2(Integer.parseInt(item.get("seat2").getN()));
+        this.setSeat3(Integer.parseInt(item.get("seat3").getN()));
+        this.setSeat4(Integer.parseInt(item.get("seat4").getN()));
     }
 
-    @DynamoDBAttribute(attributeName = "tableCap")
-    public int getTableCap() {
-        return tableCap;
+    //GETS
+    public int getTableAvail() {
+        tableAvail = 4-seat1-seat2-seat3-seat4;
+        return tableAvail;
     }
 
     @DynamoDBHashKey(attributeName = "tableID")
@@ -69,6 +87,11 @@ public class Table {
     @DynamoDBAttribute(attributeName = "tableType")
     public int getTableType() {
         return tableType;
+    }
+
+    @DynamoDBAttribute(attributeName = "tableAngle")
+    public int getTableAngle() {
+        return tableAngle;
     }
 
     @DynamoDBAttribute(attributeName = "tableX")
@@ -102,14 +125,6 @@ public class Table {
     }
 
     //SETS
-    public void setTableAvail(int tableAvail) {
-        this.tableAvail = tableAvail;
-    }
-
-    public void setTableCap(int tableCap) {
-        this.tableCap = tableCap;
-    }
-
     public void setTableID(int tableID) {
         this.tableID = tableID;
     }
@@ -120,6 +135,10 @@ public class Table {
 
     public void setTableType(int tableType) {
         this.tableType = tableType;
+    }
+
+    public void setTableAngle(int tableAngle) {
+        this.tableAngle = tableAngle;
     }
 
     public void setTableX(int tableX) {

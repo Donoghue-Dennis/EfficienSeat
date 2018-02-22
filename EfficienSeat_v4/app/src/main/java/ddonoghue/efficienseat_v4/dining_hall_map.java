@@ -14,13 +14,17 @@ import android.widget.Toast;
 
 import com.amazonaws.auth.CognitoCachingCredentialsProvider;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
+import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBSaveExpression;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.ExpectedAttributeValue;
+import com.amazonaws.services.dynamodbv2.model.GetItemResult;
 import com.amazonaws.services.dynamodbv2.model.ScanRequest;
 import com.amazonaws.services.dynamodbv2.model.ScanResult;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Timer;
@@ -28,16 +32,25 @@ import java.util.TimerTask;
 
 public class dining_hall_map extends AppCompatActivity {
 
-    final List<Table> Tables = new ArrayList<Table>();
+    final List<localTable> Tables = new ArrayList<localTable>();
     SwipeRefreshLayout mSwipeRefreshLayout;
     Thread mythread;
     int intPartySize = 0;
     CustomView mCustomView;
+    AmazonDynamoDBClient ddbClient = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dining_hall_map);
+
+        // Initialize the Amazon Cognito credentials provider
+        CognitoCachingCredentialsProvider credentialsProvider = new CognitoCachingCredentialsProvider(
+                getApplicationContext(),
+                "us-east-1:20683c3f-19dc-43cd-9f92-0fd149d55078", // Identity pool ID
+                Regions.US_EAST_1 // Region
+        );
+        ddbClient = new AmazonDynamoDBClient(credentialsProvider);
 
         //write sample tables
         //writeTestTables();
@@ -109,55 +122,39 @@ public class dining_hall_map extends AppCompatActivity {
 
     public void writeTestTables(){
         //sample tables
-        Table testTable1 = new Table(100, 100, 12, 0, 1, 4, 4, 0,0,0,0);
-        Table testTable2 = new Table(250, 500, 23, 0, 1, 4, 3, 0,0,0,1);
-        Table testTable3 = new Table(500, 1000, 34, 1, 1, 4, 3, 0,0,1,0);
-        Table testTable4 = new Table(350, 750, 45, 0, 1, 4, 2, 0,0,1,1);
-        Table testTable5 = new Table(1000, 1000, 56, 1, 1, 4, 3, 0,1,0,0);
-        Table testTable6 = new Table(600, 300, 67, 1, 1, 4, 2, 0,1,0,1);
-        Table testTable7 = new Table(700, 1000, 78, 0, 1, 4, 2, 0,1,1,0);
-        Table testTable8 = new Table(800, 100, 89, 0, 1, 4, 1, 0,1,1,1);
-        Table testTable9 = new Table(900, 500, 90, 0, 1, 4, 3, 1,0,0,0);
+        localTable testTable1 = new localTable(this,100,100,12,0,1,0,0,0,0,0);
+        localTable testTable2 = new localTable(this,250,500,23,0,1,15,0,0,0,1);
+        localTable testTable3 = new localTable(this,500,1000,34,1,1,30,1,1,1,1);
+        localTable testTable4 = new localTable(this,350,750,45,0,1,45,0,0,1,1);
+        localTable testTable5 = new localTable(this,1000,1000,56,1,1,60,0,1,0,0);
+        localTable testTable6 = new localTable(this,600,300,67,1,1,75,0,1,0,1);
+        localTable testTable7 = new localTable(this,700,1000,78,0,1,90,0,1,1,0);
+        localTable testTable8 = new localTable(this,800,100,89,0,1,270,0,1,1,1);
+        localTable testTable9 = new localTable(this,900,500,90,1,1,359,1,0,0,0);
+        localTable testTable10 = new localTable(this,770,770,1,0,1,360,1,0,0,0);
 
-        pushTable(testTable1);
-        pushTable(testTable2);
-        pushTable(testTable3);
-        pushTable(testTable4);
-        pushTable(testTable5);
-        pushTable(testTable6);
-        pushTable(testTable7);
-        pushTable(testTable8);
-        pushTable(testTable9);
+        writeTable(testTable1);
+        writeTable(testTable2);
+        writeTable(testTable3);
+        writeTable(testTable4);
+        writeTable(testTable5);
+        writeTable(testTable6);
+        writeTable(testTable7);
+        writeTable(testTable8);
+        writeTable(testTable9);
+
+        //condWriteTable(testTable10, "tableStatus","0");
     }
 
-    public void pullTables(){
+    public void scanTables(){
         Runnable runnable = new Runnable() {
             public void run() {
-
-                // Initialize the Amazon Cognito credentials provider
-                CognitoCachingCredentialsProvider credentialsProvider = new CognitoCachingCredentialsProvider(
-                        getApplicationContext(),
-                        "us-east-1:20683c3f-19dc-43cd-9f92-0fd149d55078", // Identity pool ID
-                        Regions.US_EAST_1 // Region
-                );
-
-                AmazonDynamoDBClient ddbClient = new AmazonDynamoDBClient(credentialsProvider);
                 ScanRequest scanRequest = new ScanRequest().withTableName("Tables");
 
                 ScanResult result = ddbClient.scan(scanRequest);
                 for (Map<String, AttributeValue> item : result.getItems()){
-                    Table tempTable = new Table();
-                    tempTable.setTableCap(Integer.parseInt(item.get("tableCap").getN()));
-                    tempTable.setTableID(Integer.parseInt(item.get("tableID").getN()));
-                    tempTable.setTableX(Integer.parseInt(item.get("tableX").getN()));
-                    tempTable.setTableY(Integer.parseInt(item.get("tableY").getN()));
-                    tempTable.setTableStatus(Integer.parseInt(item.get("tableStatus").getN()));
-                    tempTable.setTableAvail(Integer.parseInt(item.get("tableAvail").getN()));
-                    tempTable.setTableType(Integer.parseInt(item.get("tableType").getN()));
-                    tempTable.setSeat1(Integer.parseInt(item.get("seat1").getN()));
-                    tempTable.setSeat2(Integer.parseInt(item.get("seat2").getN()));
-                    tempTable.setSeat3(Integer.parseInt(item.get("seat3").getN()));
-                    tempTable.setSeat4(Integer.parseInt(item.get("seat4").getN()));
+                    localTable tempTable = new localTable();
+                    tempTable.updateTable(item);
                     Tables.add(tempTable);
                 }
             }
@@ -166,18 +163,53 @@ public class dining_hall_map extends AppCompatActivity {
         mythread.start();
     }
 
-    public void pushTable(final Table table){
+    public localTable readTable(final String id){
+        final localTable tempTable = new localTable();
+
+         Runnable runnable = new Runnable() {
+            public void run() {
+                Map<String,AttributeValue> testKey = new HashMap<String,AttributeValue>();
+                testKey.put("tableID", new AttributeValue().withN(id));
+                GetItemResult result = ddbClient.getItem("Tables",testKey);
+                Map<String,AttributeValue> item = result.getItem();
+                tempTable.updateTable(item);
+            }
+        };
+        mythread = new Thread(runnable);
+        mythread.start();
+
+        return tempTable;
+    }
+
+    public void condWriteTable(final localTable table, final String key, final String expectedValue){
         Runnable runnable = new Runnable() {
             public void run() {
+                String tStat = Integer.toString(table.getTableStatus());
+                DynamoDBMapper mapper = new DynamoDBMapper(ddbClient);
 
-                // Initialize the Amazon Cognito credentials provider
-                CognitoCachingCredentialsProvider credentialsProvider = new CognitoCachingCredentialsProvider(
-                        getApplicationContext(),
-                        "us-east-1:20683c3f-19dc-43cd-9f92-0fd149d55078", // Identity pool ID
-                        Regions.US_EAST_1 // Region
-                );
+                DynamoDBSaveExpression saveExpression = new DynamoDBSaveExpression();
+                Map<String, ExpectedAttributeValue> expectedAttributes = new HashMap<String, ExpectedAttributeValue>();
 
-                AmazonDynamoDBClient ddbClient = new AmazonDynamoDBClient(credentialsProvider);
+                expectedAttributes.put(key, new ExpectedAttributeValue(new AttributeValue().withN(expectedValue)).withExists(true));
+
+                saveExpression.setExpected(expectedAttributes);
+
+
+                try {
+                    mapper.save(table, saveExpression);
+                } catch (Exception e) {
+                    //Handle conditional check
+                    Log.d("err","Conditional save failed: " + e.toString());
+                }
+            }
+        };
+        Thread mythread = new Thread(runnable);
+        mythread.start();
+    }
+
+    public void writeTable(final localTable table){
+        Runnable runnable = new Runnable() {
+            public void run() {
                 DynamoDBMapper mapper = new DynamoDBMapper(ddbClient);
 
                 mapper.save(table);
@@ -192,9 +224,9 @@ public class dining_hall_map extends AppCompatActivity {
         mCustomView.setPartySize(PartySize);
 
         //download and set tables
-        pullTables();
+        scanTables();
         while(mythread.isAlive());
-        mCustomView.setTable(Tables);
+        mCustomView.addTables(Tables);
 
         //render
         mCustomView.postInvalidate();
