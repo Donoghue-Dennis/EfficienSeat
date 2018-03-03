@@ -11,25 +11,21 @@ import com.amazonaws.auth.CognitoCachingCredentialsProvider;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBAttribute;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBHashKey;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
-import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBSaveExpression;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBTable;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
-import com.amazonaws.services.dynamodbv2.model.ExpectedAttributeValue;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @DynamoDBTable(tableName = "Tables")
 public class localTable {
 
     private int tableID,tableStatus,tableX,tableY,tableCap,tableAvail,tableType,tableAngle,seat1,seat2,seat3,seat4;
-    AmazonDynamoDBClient ddbClient;
+
     private Context tableContext;
 
-    public localTable(AmazonDynamoDBClient databaseClient, int x, int y, int id, int status, int type, int angle, int seat1, int seat2, int seat3, int seat4){
+    public localTable(Context context, int x, int y, int id, int status, int type, int angle, int seat1, int seat2, int seat3, int seat4){
         this.tableStatus = status;
         this.tableX = x;
         this.tableY = y;
@@ -41,7 +37,7 @@ public class localTable {
         this.seat2 = seat2;
         this.seat3 = seat3;
         this.seat4 = seat4;
-        this.ddbClient = databaseClient;
+        this.tableContext = context;
     }
 
     public localTable(){}
@@ -72,61 +68,12 @@ public class localTable {
         this.setSeat4(Integer.parseInt(item.get("seat4").getN()));
     }
 
-    public void condWriteTable(final String key, final String expectedValue){
-        final localTable tempTable = this;
-        Runnable runnable = new Runnable() {
-            public void run() {
-                DynamoDBMapper mapper = new DynamoDBMapper(ddbClient);
-
-                DynamoDBSaveExpression saveExpression = new DynamoDBSaveExpression();
-                Map<String, ExpectedAttributeValue> expectedAttributes = new HashMap<String, ExpectedAttributeValue>();
-
-                expectedAttributes.put(key, new ExpectedAttributeValue(new AttributeValue().withN(expectedValue)).withExists(true));
-
-                saveExpression.setExpected(expectedAttributes);
-
-                mapper.save(tempTable, saveExpression);
-
-            }
-        };
-        Thread mythread = new Thread(runnable);
-        try{
-            mythread.start();
-        }catch (ConditionalCheckFailedException e){
-            //Handle conditional check
-            Log.d("err","Conditional save failed: " + e.toString());
-            throw e;
-        }
-    }
-
-    public void writeTable(){
-        final localTable tempTable = this;
-        Runnable runnable = new Runnable() {
-            public void run() {
-                DynamoDBMapper mapper = new DynamoDBMapper(ddbClient);
-
-                mapper.save(tempTable);
-            }
-        };
-        Thread mythread = new Thread(runnable);
-        mythread.start();
-    }
-
-    public void updateClient(AmazonDynamoDBClient newClient){
-        ddbClient = newClient;
-    }
-
     //GETS
     public int getTableAvail() {
-        tableAvail = 0;
-        if(seat1 == 0) tableAvail++;
-        if(seat2 == 0) tableAvail++;
-        if(seat3 == 0) tableAvail++;
-        if(seat4 == 0) tableAvail++;
+        tableAvail = 4-seat1-seat2-seat3-seat4;
         return tableAvail;
     }
 
-    //GETS
     @DynamoDBHashKey(attributeName = "tableID")
     public int getTableID() {
         return tableID;
