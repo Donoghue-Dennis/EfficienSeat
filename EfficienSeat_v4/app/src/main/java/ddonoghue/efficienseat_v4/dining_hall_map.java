@@ -56,7 +56,7 @@ public class dining_hall_map extends AppCompatActivity {
         ddbClient = new AmazonDynamoDBClient(credentialsProvider);
 
         //write sample tables
-        writeTestTables();
+        //writeTestTables();
 
         //initialize refresh and custom view
         mCustomView = (CustomView) findViewById(R.id.custom_view);
@@ -125,16 +125,16 @@ public class dining_hall_map extends AppCompatActivity {
 
     public void writeTestTables(){
         //sample tables
-        localTable testTable1 = new localTable(ddbClient,100,100,12,0,0,0,0,0,0,0);
-        localTable testTable2 = new localTable(ddbClient,250,500,23,0,0,15,0,0,0,1);
-        localTable testTable3 = new localTable(ddbClient,500,1000,34,1,0,30,1,1,1,1);
-        localTable testTable4 = new localTable(ddbClient,350,750,45,0,0,45,0,0,2,2);
-        localTable testTable5 = new localTable(ddbClient,1000,1000,56,2,1,60,2,2,2,2);
-        localTable testTable6 = new localTable(ddbClient,600,300,67,2,1,75,2,2,2,2);
-        localTable testTable7 = new localTable(ddbClient,700,1000,78,0,0,90,0,1,1,0);
-        localTable testTable8 = new localTable(ddbClient,800,100,89,0,0,270,0,1,1,1);
-        localTable testTable9 = new localTable(ddbClient,900,500,90,1,1,359,1,1,1,1);
-        localTable testTable10 = new localTable(ddbClient,770,770,1,1,1,360,1,1,1,1);
+        localTable testTable1 = new localTable(ddbClient,100,700,1,0,0,45,1,0,0,0);
+        localTable testTable2 = new localTable(ddbClient,100,500,2,1,0,135,1,1,1,1);
+        localTable testTable3 = new localTable(ddbClient,100,300,3,0,0,225,1,0,1,0);
+        localTable testTable4 = new localTable(ddbClient,100,100,4,0,0,315,0,1,0,0);
+        localTable testTable5 = new localTable(ddbClient,350,600,5,0,0,45,1,0,2,2);
+        localTable testTable6 = new localTable(ddbClient,550,600,6,0,1,0,0,0,0,0);
+        localTable testTable7 = new localTable(ddbClient,600,450,7,0,0,45,0,0,0,0);
+        localTable testTable8 = new localTable(ddbClient,350,400,8,1,1,0,1,1,1,1);
+        localTable testTable9 = new localTable(ddbClient,550,300,9,0,1,0,0,0,0,0);
+        localTable testTable10 = new localTable(ddbClient,350,150,10,2,1,0,2,2,2,2);
 
         testTable1.writeTable();
         testTable2.writeTable();

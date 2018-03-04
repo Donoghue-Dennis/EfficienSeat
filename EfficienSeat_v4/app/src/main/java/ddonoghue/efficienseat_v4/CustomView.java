@@ -10,7 +10,6 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.widget.Toast;
 
 
@@ -35,14 +34,16 @@ public class CustomView extends View{
 
     //tables, table size, table offset
     List<localTable> tables = new ArrayList<>();
-    int x1,x2,x3,x4,y1,y2,y3,y4;
+    int[] seatX = new int[4];
+    int[] seatY = new int[4];
     int tSize = 50;
     float off = Math.round(tSize*1.65);
-    float miniOff = Math.round(off*0.1);
+    float miniLabelOff = Math.round(off*0.1);
     int canvasWidth, canvasHeight;
 
     //foo
     Context currentContext;
+    int seshInt;
     int partySize = 0;
 
     //click variables
@@ -103,7 +104,11 @@ public class CustomView extends View{
 
     @Override
     protected void onDraw(Canvas canvas){
+        seshInt = sessionID.getInstance().getID();
         super.onDraw(canvas);
+
+        //Clear previous canvas
+        canvas.drawColor(Color.WHITE);
 
         //canvas scaling stuff
         canvas.save();
@@ -161,70 +166,104 @@ public class CustomView extends View{
         //if table is unclaimed and party fits
         if(tableStatus == 0 && partyFits)
             canvas.drawCircle(tableX, tableY, tSize, paintOpen);
-        //if table is reserved and partyFits
-        else if(tableStatus >= 2 && partyFits)
+            //if table is reserved and partyFits
+        else if(tableStatus == seshInt)
             canvas.drawCircle(tableX, tableY, tSize, paintReserved);
-        //if table is claimed or party doesn't fit and table isn't errored
-        else if(tableStatus == 1 || (!partyFits))
+            //if table is claimed or party doesn't fit and table isn't errored
+        else if(tableStatus >= 1 || (!partyFits))
             canvas.drawCircle(tableX, tableY, tSize, paintClaimed);
-        //table is errored
+            //table is errored
         else canvas.drawCircle(tableX, tableY, tSize, paintError);
         //print label
         paintText.setTextSize(tSize);
-        canvas.drawText(table.getTableID() + "",tableX-25, tableY+13, paintText);
+        int textOff = 0;
+        if(String.valueOf(table.getTableID()).length() == 1){
+            textOff = tSize/4;
+        }
+        if(String.valueOf(table.getTableID()).length() == 2){
+            textOff = tSize/2;
+        }
+        canvas.drawText(table.getTableID() + "",tableX-textOff, tableY+13, paintText);
 
         //draw seats
-        if(partyFits && table.getTableType() == 0 && table.getTableAvail() > 0) {
+        if(partyFits && table.getTableAvail() > 0){
             //adjust text size
             paintText.setTextSize(tSize/2);
 
-            //Seat One
-            x1 = (int)(tableX + (off * sin(toRadians(table.getTableAngle()-135))));
-            y1 = (int)(tableY + (off * cos(toRadians(table.getTableAngle()-135))));
-            if(seatOne == 0) {
-                canvas.drawCircle(x1, y1, tSize/2, paintOpen);
-            }else if(seatOne == 1){
-                canvas.drawCircle(x1, y1, tSize/2, paintClaimed);
-            }else if(seatOne >= 2){
-                canvas.drawCircle(x1, y1, tSize/2, paintReserved);
-            }
-            canvas.drawText( "1",(x1 - miniOff), (y1 + miniOff), paintText);
+            //if table is multireserve
+            if(table.getTableType() == 0){
+                //create seats
+                seatX[0] = (int)(tableX + (off * sin(toRadians(table.getTableAngle()-135))));
+                seatY[0] = (int)(tableY + (off * cos(toRadians(table.getTableAngle()-135))));
+                seatX[1] = (int)(tableX + (off * sin(toRadians(table.getTableAngle()+135))));
+                seatY[1] = (int)(tableY + (off * cos(toRadians(table.getTableAngle()+135))));
+                seatX[2] = (int)(tableX + (off * sin(toRadians(table.getTableAngle()+45))));
+                seatY[2] = (int)(tableY + (off * cos(toRadians(table.getTableAngle()+45))));
+                seatX[3] = (int)(tableX + (off * sin(toRadians(table.getTableAngle()-45))));
+                seatY[3] = (int)(tableY + (off * cos(toRadians(table.getTableAngle()-45))));
 
-            //Seat Two
-            x2 = (int)(tableX + (off * sin(toRadians(table.getTableAngle()+135))));
-            y2 = (int)(tableY + (off * cos(toRadians(table.getTableAngle()+135))));
-            if(seatTwo == 0) {
-                canvas.drawCircle(x2, y2, tSize/2, paintOpen);
-            }else if(seatTwo == 1){
-                canvas.drawCircle(x2, y2, tSize/2, paintClaimed);
-            }else if(seatTwo >= 2){
-                canvas.drawCircle(x2, y2, tSize/2, paintReserved);
-            }
-            canvas.drawText( "2",(x2 - miniOff), (y2 + miniOff), paintText);
+                //Seat One
+                    if(seatOne == 0) {
+                        canvas.drawCircle(seatX[0], seatY[0], tSize/2, paintOpen);
+                    }else if(seatOne == 1 || (seatOne != seshInt)){
+                        canvas.drawCircle(seatX[0], seatY[0], tSize/2, paintClaimed);
+                    }else if(seatOne == seshInt){
+                        canvas.drawCircle(seatX[0], seatY[0], tSize/2, paintReserved);
+                    }
+                canvas.drawText( "1",(seatX[0] - miniLabelOff), (seatY[0] + miniLabelOff), paintText);
 
-            //Seat Three
-            x3 = (int)(tableX + (off * sin(toRadians(table.getTableAngle()+45))));
-            y3 = (int)(tableY + (off * cos(toRadians(table.getTableAngle()+45))));
-            if(seatThree == 0) {
-                canvas.drawCircle(x3, y3, tSize/2, paintOpen);
-            }else if(seatThree == 1){
-                canvas.drawCircle(x3, y3, tSize/2, paintClaimed);
-            }else if(seatThree >= 2){
-                canvas.drawCircle(x3, y3, tSize/2, paintReserved);
-            }
-            canvas.drawText( "3",(x3 - miniOff), (y3 + miniOff), paintText);
+                //Seat Two
+                if(seatTwo == 0) {
+                    canvas.drawCircle(seatX[1], seatY[1], tSize/2, paintOpen);
+                }else if(seatTwo == 1 || (seatTwo != seshInt)){
+                    canvas.drawCircle(seatX[1], seatY[1], tSize/2, paintClaimed);
+                }else if(seatTwo == seshInt){
+                    canvas.drawCircle(seatX[1], seatY[1], tSize/2, paintReserved);
+                }
+                canvas.drawText( "2",(seatX[1] - miniLabelOff), (seatY[1] + miniLabelOff), paintText);
 
-            //Seat Four
-            x4 = (int)(tableX + (off * sin(toRadians(table.getTableAngle()-45))));
-            y4 = (int)(tableY + (off * cos(toRadians(table.getTableAngle()-45))));
-            if(seatFour == 0) {
-                canvas.drawCircle(x4, y4, tSize/2, paintOpen);
-            }else if(seatFour == 1){
-                canvas.drawCircle(x4, y4, tSize/2, paintClaimed);
-            }else if(seatFour >= 2){
-                canvas.drawCircle(x4, y4, tSize/2, paintReserved);
+                //Seat Three
+                if(seatThree == 0) {
+                    canvas.drawCircle(seatX[2], seatY[2], tSize/2, paintOpen);
+                }else if(seatThree == 1 || (seatThree != seshInt)){
+                    canvas.drawCircle(seatX[2], seatY[2], tSize/2, paintClaimed);
+                }else if(seatThree == seshInt){
+                    canvas.drawCircle(seatX[2], seatY[2], tSize/2, paintReserved);
+                }
+                canvas.drawText( "3",(seatX[2] - miniLabelOff), (seatY[2] + miniLabelOff), paintText);
+
+                //Seat Four
+                if(seatFour == 0) {
+                    canvas.drawCircle(seatX[3], seatY[3], tSize/2, paintOpen);
+                }else if(seatFour == 1 || (seatFour != seshInt)){
+                    canvas.drawCircle(seatX[3], seatY[3], tSize/2, paintClaimed);
+                }else if(seatFour == seshInt){
+                    canvas.drawCircle(seatX[3], seatY[3], tSize/2, paintReserved);
+                }
+                canvas.drawText( "4",(seatX[3] - miniLabelOff), (seatY[3] + miniLabelOff), paintText);
             }
-            canvas.drawText( "4",(x4 - miniOff), (y4 + miniOff), paintText);
+            else {
+                //table is single reserve
+                seatX[0] = (int)(tableX + (tSize * sin(toRadians(table.getTableAngle()-135))));
+                seatY[0] = (int)(tableY + (tSize * cos(toRadians(table.getTableAngle()-135))));
+                seatX[1] = (int)(tableX + (tSize * sin(toRadians(table.getTableAngle()+135))));
+                seatY[1] = (int)(tableY + (tSize * cos(toRadians(table.getTableAngle()+135))));
+                seatX[2] = (int)(tableX + (tSize * sin(toRadians(table.getTableAngle()+45))));
+                seatY[2] = (int)(tableY + (tSize * cos(toRadians(table.getTableAngle()+45))));
+                seatX[3] = (int)(tableX + (tSize * sin(toRadians(table.getTableAngle()-45))));
+                seatY[3] = (int)(tableY + (tSize * cos(toRadians(table.getTableAngle()-45))));
+
+                //draw seats
+                for(int i = 0; i < 4; i++) {
+                    if(tableStatus == 0) {
+                        canvas.drawCircle(seatX[i], seatY[i], tSize/2, paintOpen);
+                    }else if(tableStatus == 1){
+                        canvas.drawCircle(seatX[i], seatY[i], tSize/2, paintClaimed);
+                    }else if(tableStatus >= 2){
+                        canvas.drawCircle(seatX[i], seatY[i], tSize/2, paintReserved);
+                    }
+                }
+            }
         }
 
         if(clickStatus){
@@ -245,93 +284,100 @@ public class CustomView extends View{
 
     public void clickHandler(int tableX, int tableY, localTable table){
         //check if table or seats were clicked.
-        int seshInt = sessionID.getInstance().getID();
         int tableType = table.getTableType();
         if(tableType == 0){
-            int distance1 = (int)Math.sqrt((x1-clickX)*(x1-clickX) + (y1-clickY)*(y1-clickY));
-            int distance2 = (int)Math.sqrt((x2-clickX)*(x2-clickX) + (y2-clickY)*(y2-clickY));
-            int distance3 = (int)Math.sqrt((x3-clickX)*(x3-clickX) + (y3-clickY)*(y3-clickY));
-            int distance4 = (int)Math.sqrt((x4-clickX)*(x4-clickX) + (y4-clickY)*(y4-clickY));
+            int distance1 = (int)Math.sqrt((seatX[0]-clickX)*(seatX[0]-clickX) + (seatY[0]-clickY)*(seatY[0]-clickY));
+            int distance2 = (int)Math.sqrt((seatX[1]-clickX)*(seatX[1]-clickX) + (seatY[1]-clickY)*(seatY[1]-clickY));
+            int distance3 = (int)Math.sqrt((seatX[2]-clickX)*(seatX[2]-clickX) + (seatY[2]-clickY)*(seatY[2]-clickY));
+            int distance4 = (int)Math.sqrt((seatX[3]-clickX)*(seatX[3]-clickX) + (seatY[3]-clickY)*(seatY[3]-clickY));
             if(distance1 <= tSize){
                 if(table.getSeat1() == 0){
+                    if(table.getSeat2() == seshInt && table.getSeat3() == seshInt && table.getSeat4() == seshInt)   table.setTableStatus(seshInt);
                     table.setSeat1(seshInt);
                     try{
                         table.condWriteTable("seat1","0");
-                    }catch(Exception e){
-                        Toast.makeText(currentContext, "table " + table.getTableID() + ", seat 1 was changed before request was sent", Toast.LENGTH_SHORT).show();
+                    }catch(ConditionalCheckFailedException e){
+                        printToast("table " + table.getTableID() + ", seat 1 was changed before request was sent");
                         table.setSeat1(0);
                     }
                     invalidate();
                 }else if(table.getSeat1() == seshInt){
+                    if(table.getSeat2() == seshInt && table.getSeat3() == seshInt && table.getSeat4() == seshInt)   table.setTableStatus(0);
                     table.setSeat1(0);
                     try{
                         table.condWriteTable("seat1",Integer.toString(seshInt));
                     }catch(ConditionalCheckFailedException e){
-                        Toast.makeText(currentContext, "table " + table.getTableID() + ", seat 1 was changed before request was sent", Toast.LENGTH_SHORT).show();
+                        printToast("table " + table.getTableID() + ", seat 1 was changed before request was sent");
                         table.setSeat1(seshInt);
                     }
                     invalidate();
-                }else Toast.makeText(currentContext, "unable to reserve table " + table.getTableID() + ", seat 1" , Toast.LENGTH_SHORT).show();
+                }else printToast("unable to reserve table " + table.getTableID());
             }else if(distance2 <= tSize){
                 if(table.getSeat2() == 0){
+                    if(table.getSeat1() == seshInt && table.getSeat3() == seshInt && table.getSeat4() == seshInt)   table.setTableStatus(seshInt);
                     table.setSeat2(seshInt);
                     try{
                         table.condWriteTable("seat2","0");
-                    }catch(Exception e){
-                        Toast.makeText(currentContext, "table " + table.getTableID() + ", seat 2 was changed before request was sent", Toast.LENGTH_SHORT).show();
+                    }catch(ConditionalCheckFailedException e){
+                        printToast("table " + table.getTableID() + ", seat 2 was changed before request was sent");
                         table.setSeat2(0);
                     }
                     invalidate();
                 }else if(table.getSeat2() == seshInt){
+                    if(table.getSeat1() == seshInt && table.getSeat3() == seshInt && table.getSeat4() == seshInt)   table.setTableStatus(0);
                     table.setSeat2(0);
                     try{
                         table.condWriteTable("seat2",Integer.toString(seshInt));
                     }catch(ConditionalCheckFailedException e){
-                        Toast.makeText(currentContext, "table " + table.getTableID() + ", seat 2 was changed before request was sent", Toast.LENGTH_SHORT).show();
+                        printToast("table " + table.getTableID() + ", seat 2 was changed before request was sent");
                         table.setSeat2(seshInt);
                     }
                     invalidate();
-                }else Toast.makeText(currentContext, "unable to reserve table " + table.getTableID() + ", seat 2" , Toast.LENGTH_SHORT).show();
+                }else printToast("unable to reserve table " + table.getTableID());
             }else if(distance3 <= tSize){
                 if(table.getSeat3() == 0){
+                    if(table.getSeat1() == seshInt && table.getSeat2() == seshInt && table.getSeat4() == seshInt)   table.setTableStatus(seshInt);
                     table.setSeat3(seshInt);
                     try{
                         table.condWriteTable("seat3","0");
-                    }catch(Exception e){
-                        Toast.makeText(currentContext, "table " + table.getTableID() + ", seat 3 was changed before request was sent", Toast.LENGTH_SHORT).show();
+                    }catch(ConditionalCheckFailedException e){
+                        printToast("table " + table.getTableID() + ", seat 3 was changed before request was sent");
                         table.setSeat3(0);
                     }
                     invalidate();
                 }else if(table.getSeat3() == seshInt){
+                    if(table.getSeat1() == seshInt && table.getSeat2() == seshInt && table.getSeat4() == seshInt)   table.setTableStatus(0);
                     table.setSeat3(0);
                     try{
                         table.condWriteTable("seat3",Integer.toString(seshInt));
                     }catch(ConditionalCheckFailedException e){
-                        Toast.makeText(currentContext, "table " + table.getTableID() + ", seat 3 was changed before request was sent", Toast.LENGTH_SHORT).show();
+                        printToast("table " + table.getTableID() + ", seat 3 was changed before request was sent");
                         table.setSeat3(seshInt);
                     }
                     invalidate();
-                }else Toast.makeText(currentContext, "unable to reserve table " + table.getTableID() + ", seat 3" , Toast.LENGTH_SHORT).show();
+                }else printToast("unable to reserve table " + table.getTableID());
             }else if(distance4 <= tSize){
                 if(table.getSeat4() == 0){
+                    if(table.getSeat1() == seshInt && table.getSeat2() == seshInt && table.getSeat3() == seshInt)   table.setTableStatus(seshInt);
                     table.setSeat4(seshInt);
                     try{
                         table.condWriteTable("seat4","0");
-                    }catch(Exception e){
-                        Toast.makeText(currentContext, "table " + table.getTableID() + ", seat 4 was changed before request was sent", Toast.LENGTH_SHORT).show();
+                    }catch(ConditionalCheckFailedException e){
+                        printToast("table " + table.getTableID() + ", seat 4 was changed before request was sent");
                         table.setSeat4(0);
                     }
                     invalidate();
                 }else if(table.getSeat4() == seshInt){
+                    if(table.getSeat1() == seshInt && table.getSeat2() == seshInt && table.getSeat3() == seshInt)   table.setTableStatus(0);
                     table.setSeat4(0);
                     try{
                         table.condWriteTable("seat4",Integer.toString(seshInt));
                     }catch(ConditionalCheckFailedException e){
-                        Toast.makeText(currentContext, "table " + table.getTableID() + ", seat 4 was changed before request was sent", Toast.LENGTH_SHORT).show();
+                        printToast("table " + table.getTableID() + ", seat 4 was changed before request was sent");
                         table.setSeat4(seshInt);
                     }
                     invalidate();
-                }else Toast.makeText(currentContext, "unable to reserve table " + table.getTableID() + ", seat 4" , Toast.LENGTH_SHORT).show();
+                }else printToast("unable to reserve table " + table.getTableID());
             }
         }else {
             int distance =(int)Math.sqrt((tableX-clickX)*(tableX-clickX) + (tableY-clickY)*(tableY-clickY));
@@ -340,8 +386,8 @@ public class CustomView extends View{
                     table.setTableStatus(seshInt);
                     try{
                         table.condWriteTable("tableStatus","0");
-                    }catch(Exception e){
-                        Toast.makeText(currentContext, "table " + table.getTableID() + " was changed before request was sent", Toast.LENGTH_SHORT).show();
+                    }catch(ConditionalCheckFailedException e){
+                        printToast("table " + table.getTableID() + " was changed before request was sent");
                         table.setTableStatus(0);
                     }
                     invalidate();
@@ -351,11 +397,11 @@ public class CustomView extends View{
                     try{
                         table.condWriteTable("tableStatus",Integer.toString(seshInt));
                     }catch(ConditionalCheckFailedException e){
-                        Toast.makeText(currentContext, "table " + table.getTableID() + " was changed before request was sent", Toast.LENGTH_SHORT).show();
+                        printToast("table " + table.getTableID() + " was changed before request was sent");
                         table.setTableStatus(seshInt);
                     }
                     invalidate();
-                }else Toast.makeText(currentContext, "unable to reserve table " + table.getTableID() , Toast.LENGTH_SHORT).show();
+                }else printToast("unable to reserve table " + table.getTableID());
             }
         }
     }
@@ -365,6 +411,10 @@ public class CustomView extends View{
         this.partySize=partySize;
     }
 
+    public void printToast(String text){
+        Toast.makeText(currentContext, text, Toast.LENGTH_SHORT).show();
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
         //Let the ScaleGestureDetector inspect all events.
@@ -372,18 +422,13 @@ public class CustomView extends View{
 
         int action = ev.getAction();
         switch (action){
-        case MotionEvent.ACTION_DOWN:
-            clickStatus = true;
-            clickX = ev.getX();
-            clickY = ev.getY();
-            break;
-        case MotionEvent.ACTION_UP:
-            invalidate();
-            break;
-        case MotionEvent.ACTION_CANCEL:
-            invalidate();
-            break;
-        default:
+            case MotionEvent.ACTION_UP:
+                clickStatus = true;
+                clickX = ev.getX();
+                clickY = ev.getY();
+                invalidate();
+                break;
+            default:
         }
         return true;
     }

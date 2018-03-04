@@ -85,7 +85,12 @@ public class localTable {
 
                 saveExpression.setExpected(expectedAttributes);
 
-                mapper.save(tempTable, saveExpression);
+                try{
+                    mapper.save(tempTable, saveExpression);
+                }catch (ConditionalCheckFailedException e){
+                    //Handle conditional check
+                    Log.d("err","Conditional save failed: " + e.toString());
+                }
 
             }
         };
@@ -95,7 +100,6 @@ public class localTable {
         }catch (ConditionalCheckFailedException e){
             //Handle conditional check
             Log.d("err","Conditional save failed: " + e.toString());
-            throw e;
         }
     }
 
@@ -119,14 +123,14 @@ public class localTable {
     //GETS
     public int getTableAvail() {
         tableAvail = 0;
-        if(seat1 == 0) tableAvail++;
-        if(seat2 == 0) tableAvail++;
-        if(seat3 == 0) tableAvail++;
-        if(seat4 == 0) tableAvail++;
+        int seshInt = sessionID.getInstance().getID();
+        if(seat1 == 0 || seat1 == seshInt) tableAvail++;
+        if(seat2 == 0 || seat2 == seshInt) tableAvail++;
+        if(seat3 == 0 || seat3 == seshInt) tableAvail++;
+        if(seat4 == 0 || seat4 == seshInt) tableAvail++;
         return tableAvail;
     }
 
-    //GETS
     @DynamoDBHashKey(attributeName = "tableID")
     public int getTableID() {
         return tableID;
