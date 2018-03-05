@@ -4,16 +4,17 @@ package ddonoghue.efficienseat_v4;
  * Created by DDonoghue on 12/3/2017.
  */
 
+import android.app.Activity;
+import android.bluetooth.BluetoothClass;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
 
-import com.amazonaws.auth.CognitoCachingCredentialsProvider;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBAttribute;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBHashKey;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBSaveExpression;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBTable;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
@@ -27,7 +28,6 @@ public class localTable {
 
     private int tableID,tableStatus,tableX,tableY,tableCap,tableAvail,tableType,tableAngle,seat1,seat2,seat3,seat4;
     AmazonDynamoDBClient ddbClient;
-    private Context tableContext;
 
     public localTable(AmazonDynamoDBClient databaseClient, int x, int y, int id, int status, int type, int angle, int seat1, int seat2, int seat3, int seat4){
         this.tableStatus = status;
@@ -58,6 +58,20 @@ public class localTable {
         Log.d("db","Seat Three Status: " + seat3);
         Log.d("db","Seat Four Status: " + seat4);
     }
+
+    public void setData(String key, int value){
+        SharedPreferences sharedPreferences;
+        sharedPreferences = MyContext.getContext().getSharedPreferences("app_data", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putInt(key, value);
+        editor.apply();
+    }
+
+    public int getData(String key){
+        SharedPreferences sharedPreferences = MyContext.getContext().getSharedPreferences("app_data", Activity.MODE_PRIVATE);
+        return sharedPreferences.getInt(key, -1);
+    }
+
 
     public void updateTable(Map<String, AttributeValue> item){
         this.setTableID(Integer.parseInt(item.get("tableID").getN()));
@@ -123,7 +137,7 @@ public class localTable {
     //GETS
     public int getTableAvail() {
         tableAvail = 0;
-        int seshInt = sessionID.getInstance().getID();
+        int seshInt = getData("deviceId");
         if(seat1 == 0 || seat1 == seshInt) tableAvail++;
         if(seat2 == 0 || seat2 == seshInt) tableAvail++;
         if(seat3 == 0 || seat3 == seshInt) tableAvail++;

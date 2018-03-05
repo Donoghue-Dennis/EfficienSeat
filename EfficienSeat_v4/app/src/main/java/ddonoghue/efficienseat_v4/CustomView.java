@@ -1,7 +1,9 @@
 package ddonoghue.efficienseat_v4;
 
 import android.annotation.TargetApi;
+import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -16,7 +18,9 @@ import android.widget.Toast;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
+import java.util.TimeZone;
 
 import static java.lang.Math.*;
 
@@ -104,7 +108,7 @@ public class CustomView extends View{
 
     @Override
     protected void onDraw(Canvas canvas){
-        seshInt = sessionID.getInstance().getID();
+        seshInt = getData("deviceId");
         super.onDraw(canvas);
 
         //Clear previous canvas
@@ -145,6 +149,39 @@ public class CustomView extends View{
                 int y = canvasHeight-((int)(tempTable.getTableY() * finalRatio)) + 100;
 
                 drawTable(x,y,tempTable,canvas);
+
+                String tableKey = "reserve_table_"+tempTable.getTableID();
+                String seat1Key = "reserve_table_"+tempTable.getTableID() + "seat_1";
+                String seat2Key = "reserve_table_"+tempTable.getTableID()+ "seat_2";
+                String seat3Key = "reserve_table_"+tempTable.getTableID()+ "seat_3";
+                String seat4Key = "reserve_table_"+tempTable.getTableID()+ "seat_4";
+
+                if(containsData(tableKey)){
+                    if(getData(tableKey) < getCurrentTime()){
+                        //timer has expired
+                    }
+                }
+                if(containsData(seat1Key)){
+                    if(getData(seat1Key) < getCurrentTime()){
+                        //timer has expired
+                    }
+                }
+                if(containsData(seat2Key)){
+                    if(getData(seat2Key) < getCurrentTime()){
+                        //timer has expired
+                    }
+                }
+                if(containsData(seat3Key)){
+                    if(getData(seat3Key) < getCurrentTime()){
+                        //timer has expired
+                    }
+                }
+                if(containsData(seat4Key)){
+                    if(getData(seat4Key) < getCurrentTime()){
+                        //timer has expired
+                    }
+                }
+
             }
         }
         clickStatus = false;
@@ -418,7 +455,7 @@ public class CustomView extends View{
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
         //Let the ScaleGestureDetector inspect all events.
-        //mScaleDetector.onTouchEvent(ev);
+        mScaleDetector.onTouchEvent(ev);
 
         int action = ev.getAction();
         switch (action){
@@ -443,5 +480,49 @@ public class CustomView extends View{
             invalidate();
             return true;
         }
+    }
+
+    public void setData(String key, int value) {
+        SharedPreferences sharedPreferences;
+        sharedPreferences = MyContext.getContext().getSharedPreferences("app_data", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putInt(key, value);
+        editor.apply();
+    }
+
+    public int getData(String key) {
+        SharedPreferences sharedPreferences = MyContext.getContext().getSharedPreferences("app_data", Activity.MODE_PRIVATE);
+        return sharedPreferences.getInt(key, -1);
+    }
+
+    public boolean containsData(String key) {
+        SharedPreferences sharedPreferences = MyContext.getContext().getSharedPreferences("app_data", Activity.MODE_PRIVATE);
+        return sharedPreferences.contains(key);
+    }
+
+    public int getCurrentTime(){
+        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+        long time = cal.getTimeInMillis();
+        return (int) cal.getTimeInMillis();
+    }
+
+    public void reserveTimer(localTable table){
+        String key = "reserve_table_" + table.getTableID();
+        int time = getCurrentTime() + 180000;
+        setData(key,time);
+    }
+
+    public void reserveTimer(localTable table, int seat){
+        String key = "reserve_table_" + table.getTableID() + "_seat_" + seat;
+        int time = getCurrentTime() + 180000;
+        setData(key,time);
+    }
+
+    public void toggleReserveTable(localTable table){
+
+    }
+
+    public void toggleReserveSeat(){
+
     }
 }
