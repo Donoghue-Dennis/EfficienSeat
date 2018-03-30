@@ -11,5 +11,7 @@
     <color name="reserved">#e7b416</color>
     <color name="claimed">#cc3232</color>
     <color name="black">#000000</color>
+    <color name="gray">#D3D3D3</color>
+
 
 </resources>

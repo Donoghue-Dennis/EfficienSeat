@@ -26,22 +26,19 @@ import java.util.Map;
 @DynamoDBTable(tableName = "Tables")
 public class localTable {
 
-    private int tableID,tableStatus,tableX,tableY,tableCap,tableAvail,tableType,tableAngle,seat1,seat2,seat3,seat4;
-    AmazonDynamoDBClient ddbClient;
+    private int tableID,tableStatus,tableX,tableY,tableAvail,tableType,tableAngle,seat1,seat2,seat3,seat4;
 
-    public localTable(AmazonDynamoDBClient databaseClient, int x, int y, int id, int status, int type, int angle, int seat1, int seat2, int seat3, int seat4){
+    public localTable(int x, int y, int id, int status, int type, int angle, int seat1, int seat2, int seat3, int seat4){
         this.tableStatus = status;
         this.tableX = x;
         this.tableY = y;
         this.tableID = id;
-        this.tableAvail = 4-seat1-seat2-seat3-seat4;
         this.tableType = type;
         this.tableAngle = angle;
         this.seat1 = seat1;
         this.seat2 = seat2;
         this.seat3 = seat3;
         this.seat4 = seat4;
-        this.ddbClient = databaseClient;
     }
 
     public localTable(){}
@@ -90,7 +87,7 @@ public class localTable {
         final localTable tempTable = this;
         Runnable runnable = new Runnable() {
             public void run() {
-                DynamoDBMapper mapper = new DynamoDBMapper(ddbClient);
+                DynamoDBMapper mapper = new DynamoDBMapper(MyDDBClient.getInstance().ddbClient);
 
                 DynamoDBSaveExpression saveExpression = new DynamoDBSaveExpression();
                 Map<String, ExpectedAttributeValue> expectedAttributes = new HashMap<String, ExpectedAttributeValue>();
@@ -121,17 +118,13 @@ public class localTable {
         final localTable tempTable = this;
         Runnable runnable = new Runnable() {
             public void run() {
-                DynamoDBMapper mapper = new DynamoDBMapper(ddbClient);
+                DynamoDBMapper mapper = new DynamoDBMapper(MyDDBClient.getInstance().ddbClient);
 
                 mapper.save(tempTable);
             }
         };
         Thread mythread = new Thread(runnable);
         mythread.start();
-    }
-
-    public void updateClient(AmazonDynamoDBClient newClient){
-        ddbClient = newClient;
     }
 
     //GETS

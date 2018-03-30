@@ -1,6 +1,9 @@
 package ddonoghue.efficienseat_v4;
 
+import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.support.v4.view.MotionEventCompat;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
@@ -11,14 +14,13 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.widget.EditText;
 import android.widget.Toast;
+import android.provider.Settings.Secure;
+
 
 import com.amazonaws.auth.CognitoCachingCredentialsProvider;
-import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
-import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBSaveExpression;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.ExpectedAttributeValue;
 import com.amazonaws.services.dynamodbv2.model.GetItemResult;
 import com.amazonaws.services.dynamodbv2.model.ScanRequest;
 import com.amazonaws.services.dynamodbv2.model.ScanResult;
@@ -27,8 +29,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
+
+import static ddonoghue.efficienseat_v4.MyContext.getContext;
 
 public class dining_hall_map extends AppCompatActivity {
 
@@ -43,6 +48,13 @@ public class dining_hall_map extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dining_hall_map);
+
+        //create and store session ID
+        String android_id = Secure.getString(getContext().getContentResolver(),
+                Secure.ANDROID_ID);
+        int deviceId = android_id.hashCode() % 10000;
+        deviceId = Math.abs(deviceId);
+        setData("deviceId", deviceId);
 
         // Initialize the Amazon Cognito credentials provider
         CognitoCachingCredentialsProvider credentialsProvider = new CognitoCachingCredentialsProvider(
@@ -63,19 +75,19 @@ public class dining_hall_map extends AppCompatActivity {
         String diningHall = intent.getStringExtra("DINING_HALL") + " Selected";
         Toast.makeText(getApplicationContext(), diningHall, Toast.LENGTH_SHORT).show();
 
+
+        //render tables at activity launch, and start automatic table rendering
+        renderTables(mCustomView, intPartySize);
         Timer timer = new Timer();
         TimerTask timerTask = new TimerTask() {
             @Override
             public void run() {
                 //refresh tables
                 renderTables(mCustomView, intPartySize);
-                Log.d("db","Tables Refreshed Automatically");
+                Log.d("db", "Tables Refreshed Automatically");
             }
         };
-        timer.schedule(timerTask, 1, 30000);
-
-        //render tables at activity launch, and start automatic table rendering
-        renderTables(mCustomView, intPartySize);
+        timer.schedule(timerTask, 1, 15000);
 
         //get party size edittext
         final EditText partySize = findViewById(R.id.party_search);
@@ -83,78 +95,86 @@ public class dining_hall_map extends AppCompatActivity {
         //textchange listener
         partySize.addTextChangedListener(new TextWatcher() {
 
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+            }
+
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+            }
+
             public void afterTextChanged(Editable editable) {
 
                 //fetch and set party size
                 String strPartySize = (String) partySize.getText().toString();
-                if(strPartySize.length() < 1) strPartySize = "0";
+                if (strPartySize.length() < 1) strPartySize = "0";
                 intPartySize = Integer.parseInt(strPartySize);
-
-                renderTables(mCustomView, intPartySize);
+                mCustomView.tableSearch(intPartySize);
             }
         });
     }
 
     @Override
-    public boolean onTouchEvent(MotionEvent event){
+    public boolean onTouchEvent(MotionEvent event) {
 
-        int action =  MotionEventCompat.getActionMasked(event);
+        int action = MotionEventCompat.getActionMasked(event);
 
-        switch(action) {
-            case (MotionEvent.ACTION_DOWN) :
+        switch (action) {
+            case (MotionEvent.ACTION_DOWN):
                 Toast.makeText(getApplicationContext(), "Refresh Tables", Toast.LENGTH_SHORT).show();
                 renderTables(mCustomView, intPartySize);
                 return true;
-            case (MotionEvent.ACTION_MOVE) :
+            case (MotionEvent.ACTION_MOVE):
                 return true;
-            case (MotionEvent.ACTION_UP) :
+            case (MotionEvent.ACTION_UP):
                 return true;
-            case (MotionEvent.ACTION_CANCEL) :
+            case (MotionEvent.ACTION_CANCEL):
                 return true;
-            case (MotionEvent.ACTION_OUTSIDE) :
+            case (MotionEvent.ACTION_OUTSIDE):
                 return true;
-            default :
+            default:
                 return super.onTouchEvent(event);
         }
     }
 
-    public void writeTestTables(){
+    public void writeTestTables() {
         //sample tables
-        localTable testTable1 = new localTable(this,100,100,12,0,1,0,0,0,0,0);
-        localTable testTable2 = new localTable(this,250,500,23,0,1,15,0,0,0,1);
-        localTable testTable3 = new localTable(this,500,1000,34,1,1,30,1,1,1,1);
-        localTable testTable4 = new localTable(this,350,750,45,0,1,45,0,0,1,1);
-        localTable testTable5 = new localTable(this,1000,1000,56,1,1,60,0,1,0,0);
-        localTable testTable6 = new localTable(this,600,300,67,1,1,75,0,1,0,1);
-        localTable testTable7 = new localTable(this,700,1000,78,0,1,90,0,1,1,0);
-        localTable testTable8 = new localTable(this,800,100,89,0,1,270,0,1,1,1);
-        localTable testTable9 = new localTable(this,900,500,90,1,1,359,1,0,0,0);
-        localTable testTable10 = new localTable(this,770,770,1,0,1,360,1,0,0,0);
+        localTable testTable1 = new localTable(ddbClient, 100, 700, 1, 0, 0, 45, 1, 0, 0, 0);
+        localTable testTable2 = new localTable(ddbClient, 100, 500, 2, 1, 0, 135, 0, 0, 0, 0);
+        localTable testTable3 = new localTable(ddbClient, 100, 300, 3, 0, 0, 225, 1, 0, 1, 0);
+        localTable testTable4 = new localTable(ddbClient, 100, 100, 4, 0, 0, 315, 0, 1, 0, 0);
+        localTable testTable5 = new localTable(ddbClient, 350, 600, 5, 0, 0, 45, 1, 0, 2, 2);
+        localTable testTable6 = new localTable(ddbClient, 550, 600, 6, 0, 1, 0, 0, 0, 0, 0);
+        localTable testTable7 = new localTable(ddbClient, 600, 450, 7, 0, 0, 45, 0, 0, 0, 0);
+        localTable testTable8 = new localTable(ddbClient, 350, 400, 8, 1, 1, 0, 0, 0, 0, 0);
+        localTable testTable9 = new localTable(ddbClient, 550, 300, 9, 0, 1, 0, 0, 0, 0, 0);
+        localTable testTable10 = new localTable(ddbClient, 350, 150, 10, 2, 1, 0, 0, 0, 0, 0);
 
-        writeTable(testTable1);
-        writeTable(testTable2);
-        writeTable(testTable3);
-        writeTable(testTable4);
-        writeTable(testTable5);
-        writeTable(testTable6);
-        writeTable(testTable7);
-        writeTable(testTable8);
-        writeTable(testTable9);
+        testTable1.writeTable();
+        testTable2.writeTable();
+        testTable3.writeTable();
+        testTable4.writeTable();
+        testTable5.writeTable();
+        testTable6.writeTable();
+        testTable7.writeTable();
+        testTable8.writeTable();
+        testTable9.writeTable();
+        testTable10.writeTable();
 
-        //condWriteTable(testTable10, "tableStatus","0");
+        int sentInt = 7777;
+        //testTable1.setData("foo",sentInt);
+        int recInt = testTable1.getData("foo");
+        Log.d("note", "Sent Data: " + sentInt + "Recieved Data: " + recInt);
     }
 
-    public void scanTables(){
+    public void scanTables() {
         Runnable runnable = new Runnable() {
             public void run() {
                 ScanRequest scanRequest = new ScanRequest().withTableName("Tables");
 
                 ScanResult result = ddbClient.scan(scanRequest);
-                for (Map<String, AttributeValue> item : result.getItems()){
+                for (Map<String, AttributeValue> item : result.getItems()) {
                     localTable tempTable = new localTable();
                     tempTable.updateTable(item);
+                    tempTable.updateClient(ddbClient);
                     Tables.add(tempTable);
                 }
             }
@@ -163,72 +183,35 @@ public class dining_hall_map extends AppCompatActivity {
         mythread.start();
     }
 
-    public localTable readTable(final String id){
-        final localTable tempTable = new localTable();
-
-         Runnable runnable = new Runnable() {
-            public void run() {
-                Map<String,AttributeValue> testKey = new HashMap<String,AttributeValue>();
-                testKey.put("tableID", new AttributeValue().withN(id));
-                GetItemResult result = ddbClient.getItem("Tables",testKey);
-                Map<String,AttributeValue> item = result.getItem();
-                tempTable.updateTable(item);
-            }
-        };
-        mythread = new Thread(runnable);
-        mythread.start();
-
-        return tempTable;
-    }
-
-    public void condWriteTable(final localTable table, final String key, final String expectedValue){
-        Runnable runnable = new Runnable() {
-            public void run() {
-                String tStat = Integer.toString(table.getTableStatus());
-                DynamoDBMapper mapper = new DynamoDBMapper(ddbClient);
-
-                DynamoDBSaveExpression saveExpression = new DynamoDBSaveExpression();
-                Map<String, ExpectedAttributeValue> expectedAttributes = new HashMap<String, ExpectedAttributeValue>();
-
-                expectedAttributes.put(key, new ExpectedAttributeValue(new AttributeValue().withN(expectedValue)).withExists(true));
-
-                saveExpression.setExpected(expectedAttributes);
-
-
-                try {
-                    mapper.save(table, saveExpression);
-                } catch (Exception e) {
-                    //Handle conditional check
-                    Log.d("err","Conditional save failed: " + e.toString());
-                }
-            }
-        };
-        Thread mythread = new Thread(runnable);
-        mythread.start();
-    }
-
-    public void writeTable(final localTable table){
-        Runnable runnable = new Runnable() {
-            public void run() {
-                DynamoDBMapper mapper = new DynamoDBMapper(ddbClient);
-
-                mapper.save(table);
-            }
-        };
-        Thread mythread = new Thread(runnable);
-        mythread.start();
-    }
-
-    public void renderTables(final CustomView mCustomView, int PartySize){
+    public void renderTables(final CustomView mCustomView, int PartySize) {
         //set party size
         mCustomView.setPartySize(PartySize);
 
         //download and set tables
         scanTables();
-        while(mythread.isAlive());
+        while (mythread.isAlive()) ;
         mCustomView.addTables(Tables);
 
         //render
         mCustomView.postInvalidate();
     }
+
+    public void setData(String key, int value) {
+        SharedPreferences sharedPreferences;
+        sharedPreferences = MyContext.getContext().getSharedPreferences("app_data", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putInt(key, value);
+        editor.apply();
+    }
+
+    public int getData(String key) {
+        SharedPreferences sharedPreferences = MyContext.getContext().getSharedPreferences("app_data", Activity.MODE_PRIVATE);
+        return sharedPreferences.getInt(key, -1);
+    }
+
+    public boolean containsData(String key) {
+        SharedPreferences sharedPreferences = MyContext.getContext().getSharedPreferences("app_data", Activity.MODE_PRIVATE);
+        return sharedPreferences.contains(key);
+    }
+
 }

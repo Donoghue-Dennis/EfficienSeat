@@ -19,7 +19,7 @@
         android:textColorHint="@color/white"
         />
 
-    <ddonoghue.efficienseat_v4.CustomView
+    <ddonoghue.efficienseat_v4.TableMapView
         android:id="@+id/custom_view"
         android:layout_width="match_parent"
         android:layout_height="0dp"

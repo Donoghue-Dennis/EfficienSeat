@@ -3,6 +3,7 @@ package ddonoghue.efficienseat_v4;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -28,7 +29,8 @@ import static java.lang.Math.*;
  * Created by DDonoghue on 11/26/2017.z
  */
 
-public class CustomView extends View{
+public class TableMapView extends View{
+
     //paint color settings
     private Paint paintClaimed;
     private Paint paintReserved;
@@ -37,7 +39,7 @@ public class CustomView extends View{
     private Paint paintText;
 
     //tables, table size, table offset
-    List<localTable> tables = new ArrayList<>();
+    int tableSearchCount;
     int[] seatX = new int[4];
     int[] seatY = new int[4];
     int tSize = 50;
@@ -52,6 +54,7 @@ public class CustomView extends View{
 
     //click variables
     boolean clickStatus;
+    boolean seatSearch = false;
     float clickX,clickY;
 
     //scaling variables
@@ -60,7 +63,7 @@ public class CustomView extends View{
     private float mScaleFactor = 1.f;
     private ScaleGestureDetector mScaleDetector;
 
-    public CustomView(Context context){
+    public TableMapView(Context context){
         super(context);
         currentContext = context;
 
@@ -68,7 +71,7 @@ public class CustomView extends View{
         mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
     }
 
-    public CustomView(Context context, AttributeSet attrs){
+    public TableMapView(Context context, AttributeSet attrs){
         super(context, attrs);
         currentContext = context;
 
@@ -76,7 +79,7 @@ public class CustomView extends View{
         mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
     }
 
-    public CustomView(Context context, AttributeSet attrs, int defStyleAttr){
+    public TableMapView(Context context, AttributeSet attrs, int defStyleAttr){
         super(context, attrs, defStyleAttr);
         currentContext = context;
 
@@ -85,7 +88,7 @@ public class CustomView extends View{
     }
 
     @TargetApi(21)
-    public CustomView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes ){
+    public TableMapView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes ){
         super(context, attrs, defStyleAttr, defStyleRes);
         currentContext = context;
 
@@ -107,6 +110,13 @@ public class CustomView extends View{
     }
 
     @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        this.canvasWidth = (int) (w - 2*off);
+        this.canvasHeight = (int) (h - 2*off);
+        super.onSizeChanged(w, h, oldw, oldh);
+    }
+
+    @Override
     protected void onDraw(Canvas canvas){
         seshInt = getData("deviceId");
         super.onDraw(canvas);
@@ -119,16 +129,19 @@ public class CustomView extends View{
         canvas.scale(mScaleFactor, mScaleFactor);
 
         //establish canvas info
-        canvasWidth = this.getWidth() - 200;
-        canvasHeight = this.getHeight() - 200;
         int inBoundX = 0;
         int inBoundY = 0;
         double ratioX;
         double ratioY;
         double finalRatio;
+        tableSearchCount = 0;
 
-        for(final localTable tempTable : tables){
+        for(final localTable tempTable : myTables.getInstance().tables){
             if(tempTable != null){
+                if (tempTable.getTableAvail() >= partySize){
+                    tableSearchCount++;
+                }
+
                 int temptableX = tempTable.getTableX();
                 int temptableY = tempTable.getTableY();
 
@@ -143,47 +156,30 @@ public class CustomView extends View{
         if(ratioX<=ratioY)finalRatio = ratioX;
         else finalRatio = ratioY;
 
-        for(final localTable tempTable : tables){
-            if(tempTable != null){
-                int x = ((int)(tempTable.getTableX() * finalRatio)) + 100;
-                int y = canvasHeight-((int)(tempTable.getTableY() * finalRatio)) + 100;
+        if(!seatSearch){
+            for(final localTable tempTable : myTables.getInstance().tables){
+                if(tempTable != null){
+                    int x = ((int)(tempTable.getTableX() * finalRatio)) + tSize;
+                    int y = canvasHeight-((int)(tempTable.getTableY() * finalRatio)) + tSize;
 
-                drawTable(x,y,tempTable,canvas);
-
-                String tableKey = "reserve_table_"+tempTable.getTableID();
-                String seat1Key = "reserve_table_"+tempTable.getTableID() + "seat_1";
-                String seat2Key = "reserve_table_"+tempTable.getTableID()+ "seat_2";
-                String seat3Key = "reserve_table_"+tempTable.getTableID()+ "seat_3";
-                String seat4Key = "reserve_table_"+tempTable.getTableID()+ "seat_4";
-
-                if(containsData(tableKey)){
-                    if(getData(tableKey) < getCurrentTime()){
-                        //timer has expired
-                    }
+                    drawTable(x,y,tempTable,canvas);
                 }
-                if(containsData(seat1Key)){
-                    if(getData(seat1Key) < getCurrentTime()){
-                        //timer has expired
-                    }
-                }
-                if(containsData(seat2Key)){
-                    if(getData(seat2Key) < getCurrentTime()){
-                        //timer has expired
-                    }
-                }
-                if(containsData(seat3Key)){
-                    if(getData(seat3Key) < getCurrentTime()){
-                        //timer has expired
-                    }
-                }
-                if(containsData(seat4Key)){
-                    if(getData(seat4Key) < getCurrentTime()){
-                        //timer has expired
-                    }
-                }
-
             }
+        }else if(tableSearchCount < 1){
+            printToast("No tables fit the search criteria");
+            seatSearch = false;
+            for(final localTable tempTable : myTables.getInstance().tables){
+                if(tempTable != null){
+                    int x = ((int)(tempTable.getTableX() * finalRatio)) + tSize;
+                    int y = canvasHeight-((int)(tempTable.getTableY() * finalRatio)) + tSize;
+
+                    drawTable(x,y,tempTable,canvas);
+                }
+            }
+        }else{
+            displaySearchTable(canvas);
         }
+
         clickStatus = false;
         canvas.restore();
     }
@@ -294,9 +290,9 @@ public class CustomView extends View{
                 for(int i = 0; i < 4; i++) {
                     if(tableStatus == 0) {
                         canvas.drawCircle(seatX[i], seatY[i], tSize/2, paintOpen);
-                    }else if(tableStatus == 1){
+                    }else if(tableStatus == 1 || (tableStatus != seshInt)){
                         canvas.drawCircle(seatX[i], seatY[i], tSize/2, paintClaimed);
-                    }else if(tableStatus >= 2){
+                    }else if(tableStatus == seshInt){
                         canvas.drawCircle(seatX[i], seatY[i], tSize/2, paintReserved);
                     }
                 }
@@ -308,15 +304,11 @@ public class CustomView extends View{
         }
     }
 
-    public void addTable(localTable sentTable) {
-        this.tables.add(sentTable);
-    }
-
-    public void addTables(List<localTable> sentTables) {
-        for(localTable table : sentTables){
-            if(!this.tables.contains(table))
-                this.tables.add(table);
-        }
+    public void displaySearchTable(Canvas canvas){
+        Intent myIntent = new Intent(currentContext, search.class);
+        myIntent.putExtra("partySize",partySize);
+        currentContext.startActivity(myIntent);
+        seatSearch = false;
     }
 
     public void clickHandler(int tableX, int tableY, localTable table){
@@ -459,6 +451,9 @@ public class CustomView extends View{
 
         int action = ev.getAction();
         switch (action){
+            case (MotionEvent.ACTION_DOWN):
+                invalidate();
+                break;
             case MotionEvent.ACTION_UP:
                 clickStatus = true;
                 clickX = ev.getX();
@@ -469,7 +464,6 @@ public class CustomView extends View{
         }
         return true;
     }
-
 
     private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
         @Override
@@ -482,7 +476,7 @@ public class CustomView extends View{
         }
     }
 
-    public void setData(String key, int value) {
+    public void setData(String key, int value){
         SharedPreferences sharedPreferences;
         sharedPreferences = MyContext.getContext().getSharedPreferences("app_data", Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
@@ -490,12 +484,12 @@ public class CustomView extends View{
         editor.apply();
     }
 
-    public int getData(String key) {
+    public int getData(String key){
         SharedPreferences sharedPreferences = MyContext.getContext().getSharedPreferences("app_data", Activity.MODE_PRIVATE);
         return sharedPreferences.getInt(key, -1);
     }
 
-    public boolean containsData(String key) {
+    public boolean containsData(String key){
         SharedPreferences sharedPreferences = MyContext.getContext().getSharedPreferences("app_data", Activity.MODE_PRIVATE);
         return sharedPreferences.contains(key);
     }
@@ -518,11 +512,8 @@ public class CustomView extends View{
         setData(key,time);
     }
 
-    public void toggleReserveTable(localTable table){
-
-    }
-
-    public void toggleReserveSeat(){
-
+    public void tableSearch(int partySize){
+        setPartySize(partySize);
+        seatSearch = true;
     }
 }

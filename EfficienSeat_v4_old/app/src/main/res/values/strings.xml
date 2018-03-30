@@ -6,4 +6,5 @@
     <string name="worcester_content_description">Click to select the Worcester Dining Hall</string>
     <string name="search_hint">Search by Party Size</string>
     <string name="title_activity_table_map">table_map</string>
+    <string name="sessionID">foo</string>
 </resources>

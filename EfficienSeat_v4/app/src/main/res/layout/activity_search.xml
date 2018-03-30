@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:weightSum="100"
+    android:background="@color/umassMaroon"
+    tools:context="ddonoghue.efficienseat_v4.search">
+
+    <TextView
+        android:id="@+id/table_name"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="10"
+        android:text="Table 01"
+        android:textColor="@color/white"
+        android:textAlignment="center"
+        android:textSize="32sp"
+        />
+
+    <ddonoghue.efficienseat_v4.TableSearchView
+        android:id="@+id/custom_view_search"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="80"
+        android:background="@color/white"
+        />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="10"
+        android:orientation="horizontal"
+        android:weightSum="100"
+        >
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.5">
+        </LinearLayout>
+        <Button
+            android:id="@+id/reserve_table"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="33"
+            android:text="Reserve"
+            android:textColor="@color/black"
+            android:textAlignment="center"
+            android:textSize="20sp"
+            android:onClick="reserveTable"/>
+
+        <Button
+            android:id="@+id/next_table"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="33"
+            android:text="Next"
+            android:textColor="@color/black"
+            android:textAlignment="center"
+            android:textSize="24sp"
+            android:onClick="nextTable"/>
+        <Button
+            android:id="@+id/cancel_search"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="33"
+            android:text="Cancel"
+            android:textColor="@color/black"
+            android:textAlignment="center"
+            android:textSize="24sp"
+            android:onClick="cancelSearch"
+            />
+    </LinearLayout>
+</LinearLayout>

@@ -4,40 +4,43 @@ package ddonoghue.efficienseat_v4;
  * Created by DDonoghue on 12/3/2017.
  */
 
+import android.app.Activity;
+import android.bluetooth.BluetoothClass;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
 
-import com.amazonaws.auth.CognitoCachingCredentialsProvider;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBAttribute;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBHashKey;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
+import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBSaveExpression;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBTable;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
+import com.amazonaws.services.dynamodbv2.model.ExpectedAttributeValue;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @DynamoDBTable(tableName = "Tables")
 public class localTable {
 
-    private int tableID,tableStatus,tableX,tableY,tableCap,tableAvail,tableType,tableAngle,seat1,seat2,seat3,seat4;
+    private int tableID,tableStatus,tableX,tableY,tableAvail,tableType,tableAngle,seat1,seat2,seat3,seat4;
+    AmazonDynamoDBClient ddbClient;
 
-    private Context tableContext;
-
-    public localTable(Context context, int x, int y, int id, int status, int type, int angle, int seat1, int seat2, int seat3, int seat4){
+    public localTable(AmazonDynamoDBClient databaseClient, int x, int y, int id, int status, int type, int angle, int seat1, int seat2, int seat3, int seat4){
         this.tableStatus = status;
         this.tableX = x;
         this.tableY = y;
         this.tableID = id;
-        this.tableAvail = 4-seat1-seat2-seat3-seat4;
         this.tableType = type;
         this.tableAngle = angle;
         this.seat1 = seat1;
         this.seat2 = seat2;
         this.seat3 = seat3;
         this.seat4 = seat4;
-        this.tableContext = context;
+        this.ddbClient = databaseClient;
     }
 
     public localTable(){}
@@ -55,6 +58,20 @@ public class localTable {
         Log.d("db","Seat Four Status: " + seat4);
     }
 
+    public void setData(String key, int value){
+        SharedPreferences sharedPreferences;
+        sharedPreferences = MyContext.getContext().getSharedPreferences("app_data", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putInt(key, value);
+        editor.apply();
+    }
+
+    public int getData(String key){
+        SharedPreferences sharedPreferences = MyContext.getContext().getSharedPreferences("app_data", Activity.MODE_PRIVATE);
+        return sharedPreferences.getInt(key, -1);
+    }
+
+
     public void updateTable(Map<String, AttributeValue> item){
         this.setTableID(Integer.parseInt(item.get("tableID").getN()));
         this.setTableX(Integer.parseInt(item.get("tableX").getN()));
@@ -68,9 +85,62 @@ public class localTable {
         this.setSeat4(Integer.parseInt(item.get("seat4").getN()));
     }
 
+    public void condWriteTable(final String key, final String expectedValue){
+        final localTable tempTable = this;
+        Runnable runnable = new Runnable() {
+            public void run() {
+                DynamoDBMapper mapper = new DynamoDBMapper(ddbClient);
+
+                DynamoDBSaveExpression saveExpression = new DynamoDBSaveExpression();
+                Map<String, ExpectedAttributeValue> expectedAttributes = new HashMap<String, ExpectedAttributeValue>();
+
+                expectedAttributes.put(key, new ExpectedAttributeValue(new AttributeValue().withN(expectedValue)).withExists(true));
+
+                saveExpression.setExpected(expectedAttributes);
+
+                try{
+                    mapper.save(tempTable, saveExpression);
+                }catch (ConditionalCheckFailedException e){
+                    //Handle conditional check
+                    Log.d("err","Conditional save failed: " + e.toString());
+                }
+
+            }
+        };
+        Thread mythread = new Thread(runnable);
+        try{
+            mythread.start();
+        }catch (ConditionalCheckFailedException e){
+            //Handle conditional check
+            Log.d("err","Conditional save failed: " + e.toString());
+        }
+    }
+
+    public void writeTable(){
+        final localTable tempTable = this;
+        Runnable runnable = new Runnable() {
+            public void run() {
+                DynamoDBMapper mapper = new DynamoDBMapper(ddbClient);
+
+                mapper.save(tempTable);
+            }
+        };
+        Thread mythread = new Thread(runnable);
+        mythread.start();
+    }
+
+    public void updateClient(AmazonDynamoDBClient newClient){
+        ddbClient = newClient;
+    }
+
     //GETS
     public int getTableAvail() {
-        tableAvail = 4-seat1-seat2-seat3-seat4;
+        tableAvail = 0;
+        int seshInt = getData("deviceId");
+        if(seat1 == 0 || seat1 == seshInt) tableAvail++;
+        if(seat2 == 0 || seat2 == seshInt) tableAvail++;
+        if(seat3 == 0 || seat3 == seshInt) tableAvail++;
+        if(seat4 == 0 || seat4 == seshInt) tableAvail++;
         return tableAvail;
     }
 
