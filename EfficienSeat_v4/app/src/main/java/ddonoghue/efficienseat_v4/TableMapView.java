@@ -2,6 +2,8 @@ package ddonoghue.efficienseat_v4;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -15,13 +17,9 @@ import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.widget.Toast;
 
-
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
-import java.util.TimeZone;
+import java.util.Collections;
 
 import static java.lang.Math.*;
 
@@ -48,8 +46,8 @@ public class TableMapView extends View{
     int canvasWidth, canvasHeight;
 
     //foo
-    Context currentContext;
-    int seshInt;
+    Intent currentIntent;
+    int seshInt = 0;
     int partySize = 0;
 
     //click variables
@@ -62,39 +60,7 @@ public class TableMapView extends View{
     private static float MAX_ZOOM = 5f;
     private float mScaleFactor = 1.f;
     private ScaleGestureDetector mScaleDetector;
-
-    public TableMapView(Context context){
-        super(context);
-        currentContext = context;
-
-        init(null);
-        mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
-    }
-
-    public TableMapView(Context context, AttributeSet attrs){
-        super(context, attrs);
-        currentContext = context;
-
-        init(attrs);
-        mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
-    }
-
-    public TableMapView(Context context, AttributeSet attrs, int defStyleAttr){
-        super(context, attrs, defStyleAttr);
-        currentContext = context;
-
-        init(attrs);
-        mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
-    }
-
-    @TargetApi(21)
-    public TableMapView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes ){
-        super(context, attrs, defStyleAttr, defStyleRes);
-        currentContext = context;
-
-        init(attrs);
-        mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
-    }
+    
 
     private void init(@Nullable AttributeSet set){
         paintClaimed = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -118,8 +84,9 @@ public class TableMapView extends View{
 
     @Override
     protected void onDraw(Canvas canvas){
-        seshInt = getData("deviceId");
         super.onDraw(canvas);
+        //Set seshInt if necessary
+        if(seshInt == 0) seshInt = getData("deviceId");
 
         //Clear previous canvas
         canvas.drawColor(Color.WHITE);
@@ -136,7 +103,10 @@ public class TableMapView extends View{
         double finalRatio;
         tableSearchCount = 0;
 
-        for(final localTable tempTable : myTables.getInstance().tables){
+        //Check for timers
+
+
+        for(final localTable tempTable : MyTables.getInstance().tables){
             if(tempTable != null){
                 if (tempTable.getTableAvail() >= partySize){
                     tableSearchCount++;
@@ -157,7 +127,7 @@ public class TableMapView extends View{
         else finalRatio = ratioY;
 
         if(!seatSearch){
-            for(final localTable tempTable : myTables.getInstance().tables){
+            for(final localTable tempTable : MyTables.getInstance().tables){
                 if(tempTable != null){
                     int x = ((int)(tempTable.getTableX() * finalRatio)) + tSize;
                     int y = canvasHeight-((int)(tempTable.getTableY() * finalRatio)) + tSize;
@@ -168,7 +138,7 @@ public class TableMapView extends View{
         }else if(tableSearchCount < 1){
             printToast("No tables fit the search criteria");
             seatSearch = false;
-            for(final localTable tempTable : myTables.getInstance().tables){
+            for(final localTable tempTable : MyTables.getInstance().tables){
                 if(tempTable != null){
                     int x = ((int)(tempTable.getTableX() * finalRatio)) + tSize;
                     int y = canvasHeight-((int)(tempTable.getTableY() * finalRatio)) + tSize;
@@ -305,10 +275,18 @@ public class TableMapView extends View{
     }
 
     public void displaySearchTable(Canvas canvas){
-        Intent myIntent = new Intent(currentContext, search.class);
+        //Organize tables
+        Collections.shuffle(MyTables.getInstance().tables);
+
+        Intent myIntent = new Intent(MyContext.getContext(), search.class);
         myIntent.putExtra("partySize",partySize);
-        currentContext.startActivity(myIntent);
+        MyContext.getContext().startActivity(myIntent);
         seatSearch = false;
+    }
+
+    public void activateTableSearch(int partySize){
+        setPartySize(partySize);
+        seatSearch = true;
     }
 
     public void clickHandler(int tableX, int tableY, localTable table){
@@ -324,7 +302,7 @@ public class TableMapView extends View{
                     if(table.getSeat2() == seshInt && table.getSeat3() == seshInt && table.getSeat4() == seshInt)   table.setTableStatus(seshInt);
                     table.setSeat1(seshInt);
                     try{
-                        table.condWriteTable("seat1","0");
+                        table.reserveSeat("seat1","0");
                     }catch(ConditionalCheckFailedException e){
                         printToast("table " + table.getTableID() + ", seat 1 was changed before request was sent");
                         table.setSeat1(0);
@@ -334,7 +312,7 @@ public class TableMapView extends View{
                     if(table.getSeat2() == seshInt && table.getSeat3() == seshInt && table.getSeat4() == seshInt)   table.setTableStatus(0);
                     table.setSeat1(0);
                     try{
-                        table.condWriteTable("seat1",Integer.toString(seshInt));
+                        table.reserveSeat("seat1",Integer.toString(seshInt));
                     }catch(ConditionalCheckFailedException e){
                         printToast("table " + table.getTableID() + ", seat 1 was changed before request was sent");
                         table.setSeat1(seshInt);
@@ -346,7 +324,7 @@ public class TableMapView extends View{
                     if(table.getSeat1() == seshInt && table.getSeat3() == seshInt && table.getSeat4() == seshInt)   table.setTableStatus(seshInt);
                     table.setSeat2(seshInt);
                     try{
-                        table.condWriteTable("seat2","0");
+                        table.reserveSeat("seat2","0");
                     }catch(ConditionalCheckFailedException e){
                         printToast("table " + table.getTableID() + ", seat 2 was changed before request was sent");
                         table.setSeat2(0);
@@ -356,7 +334,7 @@ public class TableMapView extends View{
                     if(table.getSeat1() == seshInt && table.getSeat3() == seshInt && table.getSeat4() == seshInt)   table.setTableStatus(0);
                     table.setSeat2(0);
                     try{
-                        table.condWriteTable("seat2",Integer.toString(seshInt));
+                        table.reserveSeat("seat2",Integer.toString(seshInt));
                     }catch(ConditionalCheckFailedException e){
                         printToast("table " + table.getTableID() + ", seat 2 was changed before request was sent");
                         table.setSeat2(seshInt);
@@ -368,7 +346,7 @@ public class TableMapView extends View{
                     if(table.getSeat1() == seshInt && table.getSeat2() == seshInt && table.getSeat4() == seshInt)   table.setTableStatus(seshInt);
                     table.setSeat3(seshInt);
                     try{
-                        table.condWriteTable("seat3","0");
+                        table.reserveSeat("seat3","0");
                     }catch(ConditionalCheckFailedException e){
                         printToast("table " + table.getTableID() + ", seat 3 was changed before request was sent");
                         table.setSeat3(0);
@@ -378,7 +356,7 @@ public class TableMapView extends View{
                     if(table.getSeat1() == seshInt && table.getSeat2() == seshInt && table.getSeat4() == seshInt)   table.setTableStatus(0);
                     table.setSeat3(0);
                     try{
-                        table.condWriteTable("seat3",Integer.toString(seshInt));
+                        table.reserveSeat("seat3",Integer.toString(seshInt));
                     }catch(ConditionalCheckFailedException e){
                         printToast("table " + table.getTableID() + ", seat 3 was changed before request was sent");
                         table.setSeat3(seshInt);
@@ -390,7 +368,7 @@ public class TableMapView extends View{
                     if(table.getSeat1() == seshInt && table.getSeat2() == seshInt && table.getSeat3() == seshInt)   table.setTableStatus(seshInt);
                     table.setSeat4(seshInt);
                     try{
-                        table.condWriteTable("seat4","0");
+                        table.reserveSeat("seat4","0");
                     }catch(ConditionalCheckFailedException e){
                         printToast("table " + table.getTableID() + ", seat 4 was changed before request was sent");
                         table.setSeat4(0);
@@ -400,7 +378,7 @@ public class TableMapView extends View{
                     if(table.getSeat1() == seshInt && table.getSeat2() == seshInt && table.getSeat3() == seshInt)   table.setTableStatus(0);
                     table.setSeat4(0);
                     try{
-                        table.condWriteTable("seat4",Integer.toString(seshInt));
+                        table.reserveSeat("seat4",Integer.toString(seshInt));
                     }catch(ConditionalCheckFailedException e){
                         printToast("table " + table.getTableID() + ", seat 4 was changed before request was sent");
                         table.setSeat4(seshInt);
@@ -414,7 +392,7 @@ public class TableMapView extends View{
                 if(table.getTableStatus() == 0){
                     table.setTableStatus(seshInt);
                     try{
-                        table.condWriteTable("tableStatus","0");
+                        table.reserveTable("tableStatus","0");
                     }catch(ConditionalCheckFailedException e){
                         printToast("table " + table.getTableID() + " was changed before request was sent");
                         table.setTableStatus(0);
@@ -424,7 +402,7 @@ public class TableMapView extends View{
                 else if(table.getTableStatus() == seshInt) {
                     table.setTableStatus(0);
                     try{
-                        table.condWriteTable("tableStatus",Integer.toString(seshInt));
+                        table.reserveTable("tableStatus",Integer.toString(seshInt));
                     }catch(ConditionalCheckFailedException e){
                         printToast("table " + table.getTableID() + " was changed before request was sent");
                         table.setTableStatus(seshInt);
@@ -441,7 +419,7 @@ public class TableMapView extends View{
     }
 
     public void printToast(String text){
-        Toast.makeText(currentContext, text, Toast.LENGTH_SHORT).show();
+        Toast.makeText(MyContext.getContext(), text, Toast.LENGTH_SHORT).show();
     }
 
     @Override
@@ -494,26 +472,32 @@ public class TableMapView extends View{
         return sharedPreferences.contains(key);
     }
 
-    public int getCurrentTime(){
-        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
-        long time = cal.getTimeInMillis();
-        return (int) cal.getTimeInMillis();
+    public TableMapView(Context context){
+        super(context);
+
+        init(null);
+        mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
     }
 
-    public void reserveTimer(localTable table){
-        String key = "reserve_table_" + table.getTableID();
-        int time = getCurrentTime() + 180000;
-        setData(key,time);
+    public TableMapView(Context context, AttributeSet attrs){
+        super(context, attrs);
+
+        init(attrs);
+        mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
     }
 
-    public void reserveTimer(localTable table, int seat){
-        String key = "reserve_table_" + table.getTableID() + "_seat_" + seat;
-        int time = getCurrentTime() + 180000;
-        setData(key,time);
+    public TableMapView(Context context, AttributeSet attrs, int defStyleAttr){
+        super(context, attrs, defStyleAttr);
+
+        init(attrs);
+        mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
     }
 
-    public void tableSearch(int partySize){
-        setPartySize(partySize);
-        seatSearch = true;
+    @TargetApi(21)
+    public TableMapView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes ){
+        super(context, attrs, defStyleAttr, defStyleRes);
+
+        init(attrs);
+        mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
     }
 }

@@ -5,36 +5,41 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.support.v4.view.MotionEventCompat;
-import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Editable;
 
 import android.text.TextWatcher;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.MotionEvent;
-import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.Toast;
 import android.provider.Settings.Secure;
 
-
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ScanRequest;
 import com.amazonaws.services.dynamodbv2.model.ScanResult;
+import com.amazonaws.services.kinesis.AmazonKinesis;
+import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
+import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorFactory;
+import com.amazonaws.services.kinesis.clientlibrary.lib.worker.InitialPositionInStream;
+import com.amazonaws.services.kinesis.clientlibrary.lib.worker.KinesisClientLibConfiguration;
+import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker;
 
+import java.net.InetAddress;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.UUID;
 
 import static ddonoghue.efficienseat_v4.MyContext.getContext;
 
 public class dining_hall_map extends AppCompatActivity {
 
-    SwipeRefreshLayout mSwipeRefreshLayout;
+    private ProfileCredentialsProvider credentialsProvider;
     Thread mythread;
     int intPartySize = 0;
     TableMapView mTableMapView;
@@ -51,6 +56,23 @@ public class dining_hall_map extends AppCompatActivity {
         deviceId = Math.abs(deviceId);
         setData("deviceId", deviceId);
 
+        //initialize credentials for stream
+        credentialsProvider = new ProfileCredentialsProvider();
+        try{
+            credentialsProvider.getCredentials();
+        }catch (Exception e){
+            throw new AmazonClientException("Cannot load the credentials from the credential profiles file. "
+                    + "Please make sure that your credentials file is at the correct "
+                    + "location (~/.aws/credentials), and is in valid format.", e);
+        }
+
+        //start stream
+        try{
+            startStream();
+        }catch (Exception e){
+            Log.d("e",e.toString());
+        }
+
         //write sample tables
         //writeTestTables();
 
@@ -59,9 +81,9 @@ public class dining_hall_map extends AppCompatActivity {
 
         //Get Selected Dining Hall
         Intent intent = getIntent();
+        mTableMapView.currentIntent = intent;
         String diningHall = intent.getStringExtra("DINING_HALL") + " Selected";
         Toast.makeText(getApplicationContext(), diningHall, Toast.LENGTH_SHORT).show();
-
 
         //render tables at activity launch, and start automatic table rendering
         renderTables(mTableMapView, intPartySize);
@@ -91,10 +113,16 @@ public class dining_hall_map extends AppCompatActivity {
                 String strPartySize = (String) partySize.getText().toString();
                 if (strPartySize.length() < 1) strPartySize = "0";
                 intPartySize = Integer.parseInt(strPartySize);
-                mTableMapView.tableSearch(intPartySize);
+                mTableMapView.activateTableSearch(intPartySize);
 
             }
         });
+    }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        renderTables(mTableMapView, intPartySize);
     }
 
     @Override
@@ -162,12 +190,41 @@ public class dining_hall_map extends AppCompatActivity {
                 for (Map<String, AttributeValue> item : result.getItems()) {
                     localTable tempTable = new localTable();
                     tempTable.updateTable(item);
-                    myTables.getInstance().tables.add(tempTable);
+                    MyTables.getInstance().tables.add(tempTable);
                 }
             }
         };
         mythread = new Thread(runnable);
         mythread.start();
+    }
+
+    public void startStream() throws Exception{
+        //Initialize Amazon Kinesis client
+        AmazonKinesis client = AmazonKinesisClientBuilder.standard()
+                .withCredentials(credentialsProvider)
+                .withRegion("us-east-1")
+                .build();
+
+        String workerId = InetAddress.getLocalHost().getCanonicalHostName() + ":" + UUID.randomUUID();
+        KinesisClientLibConfiguration kinesisClientLibConfiguration =
+                new KinesisClientLibConfiguration("testApplication",
+                        "testStreamName",
+                        credentialsProvider,
+                        workerId);
+        kinesisClientLibConfiguration.withInitialPositionInStream(InitialPositionInStream.LATEST);
+
+        IRecordProcessorFactory recordProcessorFactory = new AmazonKinesisApplicationRecordProcessorFactory();
+        Worker worker = new Worker(recordProcessorFactory, kinesisClientLibConfiguration);
+
+        int exitCode = 0;
+        try {
+            worker.run();
+        } catch (Throwable t) {
+            System.err.println("Caught throwable while processing data.");
+            t.printStackTrace();
+            exitCode = 1;
+        }
+        System.exit(exitCode);
     }
 
     public void renderTables(final TableMapView mTableMapView, int PartySize) {

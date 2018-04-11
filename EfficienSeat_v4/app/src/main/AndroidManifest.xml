@@ -22,6 +22,14 @@
         </activity>
         <activity android:name=".dining_hall_map" />
         <activity android:name=".search"></activity>
+        <receiver android:name=".NotifActionReceiver"></receiver>
+        <receiver android:name=".AlarmReceiver">
+            <intent-filter>
+                <action android:name="android.media.action.DISPLAY_NOTIFICATION" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
